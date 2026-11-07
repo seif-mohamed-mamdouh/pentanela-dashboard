@@ -1,0 +1,316 @@
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">YOUR BUSINESS, AT A GLANCE</p>
+    <h1>Operations overview<span class="gold-period">.</span></h1>
+    <p class="page-description">A little clarity for everything you manage.</p>
+  </div>
+  <button
+    class="secondary-button"
+    type="button"
+    (click)="reload()"
+    [disabled]="loading() || vendorsLoading()"
+  >
+    <app-icon name="refresh" [size]="17" />{{
+      loading() || vendorsLoading() ? "Refreshing…" : "Refresh overview"
+    }}
+  </button>
+</section>
+<div class="scope-line">
+  <span><span class="scope-dot"></span>Company-wide overview</span
+  ><span>{{
+    refreshedAt()
+      ? "Updated " + (refreshedAt() | date: "shortTime")
+      : "Latest workspace records"
+  }}</span>
+</div>
+@if (context.selected()) {
+  <p class="scope-explanation">
+    Working account: <strong>{{ context.selected()?.name }}</strong
+    >. Overview totals include all accounts.
+  </p>
+}
+@if (error()) {
+  <div class="error-panel" role="alert">
+    <app-icon name="alert" />{{ error() }}
+  </div>
+}
+<section
+  class="metrics-strip"
+  aria-label="Company-wide metrics"
+  [attr.aria-busy]="loading()"
+>
+  @for (metric of metrics(); track metric.label) {
+    <a class="metric" [routerLink]="metric.path"
+      ><div class="metric-label">
+        <span>{{ metric.label }}</span
+        ><app-icon [name]="metric.icon" [size]="19" />
+      </div>
+      @if (loading()) {
+        <span class="skeleton metric-skeleton"></span>
+      } @else {
+        <strong>{{
+          metric.value == null ? "—" : (metric.value | number)
+        }}</strong>
+      }
+      <div class="metric-bottom">
+        <span>{{ metric.detail }}</span
+        ><app-icon name="arrow" [size]="16" />
+      </div>
+    </a>
+  }
+</section>
+<div class="dashboard-grid">
+  <div class="min-w-0 space-y-6">
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">CONNECTION HEALTH</p>
+          <h2>Your vendor portfolio</h2>
+        </div>
+        <a class="text-link" routerLink="/vendor-accounts"
+          >View accounts <app-icon name="arrow" [size]="16"
+        /></a>
+      </div>
+      @if (vendorsLoading()) {
+        <div
+          class="skeleton chart-skeleton"
+          aria-label="Loading account health"
+        ></div>
+      } @else if (vendorsError()) {
+        <div class="inline-error" role="alert">
+          Account health is unavailable. Refresh to try again.
+        </div>
+      } @else if (!vendors().length) {
+        <div class="empty-state compact">
+          <app-icon name="accounts" [size]="30" />
+          <h3>Your portfolio starts here</h3>
+          <p>
+            Accounts will appear once your administrator has connected them.
+          </p>
+        </div>
+      } @else {
+        <div class="health-layout">
+          <div
+            class="health-ring"
+            [style.--verified]="percent(connected()) + '%'"
+            [style.--review]="percent(connected() + attention()) + '%'"
+            role="img"
+            [attr.aria-label]="
+              connected() +
+              ' verified, ' +
+              attention() +
+              ' need review, ' +
+              inactive() +
+              ' inactive'
+            "
+          >
+            <div>
+              <strong>{{ vendors().length }}</strong
+              ><span>accounts</span>
+            </div>
+          </div>
+          <div class="health-breakdown">
+            <a
+              routerLink="/vendor-accounts"
+              [queryParams]="{ status: 'connected' }"
+              ><span
+                ><i class="legend-dot verified"></i>Verified credentials</span
+              ><b>{{ connected() }}<app-icon name="arrow" [size]="14" /></b
+            ></a>
+            <a
+              routerLink="/vendor-accounts"
+              [queryParams]="{ status: 'attention' }"
+              ><span><i class="legend-dot review"></i>Needs review</span
+              ><b>{{ attention() }}<app-icon name="arrow" [size]="14" /></b
+            ></a>
+            <a
+              routerLink="/vendor-accounts"
+              [queryParams]="{ status: 'inactive' }"
+              ><span><i class="legend-dot inactive"></i>Inactive accounts</span
+              ><b>{{ inactive() }}<app-icon name="arrow" [size]="14" /></b
+            ></a>
+          </div>
+        </div>
+        <p class="section-note">
+          <app-icon name="clock" [size]="14" />Based on the last recorded
+          credential check.
+        </p>
+      }
+    </section>
+    <section class="panel attention-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">YOUR NEXT STEPS</p>
+          <h2>
+            Needs your attention
+            <span class="count-badge">{{
+              vendorsError() || vendorsLoading()
+                ? "—"
+                : attention() + inactive()
+            }}</span>
+          </h2>
+        </div>
+        <app-icon name="alert" [size]="20" />
+      </div>
+      @if (vendorsLoading()) {
+        <div class="skeleton list-skeleton" aria-label="Loading accounts"></div>
+      } @else if (vendorsError()) {
+        <div class="inline-error" role="alert">
+          We could not check which accounts need attention.
+        </div>
+      } @else if (!attentionAccounts().length) {
+        <div class="empty-state compact">
+          <span class="empty-icon"
+            ><app-icon [name]="vendors().length ? 'check' : 'accounts'"
+          /></span>
+          <h3>
+            {{
+              vendors().length
+                ? "You’re all caught up"
+                : "No accounts to review yet"
+            }}
+          </h3>
+          <p>
+            {{
+              vendors().length
+                ? "All active accounts have verified credentials."
+                : "Connected accounts and their next steps will appear here."
+            }}
+          </p>
+        </div>
+      } @else {
+        <div class="attention-list">
+          @for (vendor of attentionAccounts(); track vendor.id) {
+            <a
+              class="attention-row"
+              routerLink="/vendor-accounts"
+              [queryParams]="{ q: vendor.vendorCode || vendor.name }"
+              ><span class="vendor-monogram">{{
+                (vendor.name || "V").slice(0, 2).toUpperCase()
+              }}</span
+              ><span class="attention-name"
+                ><b>{{ vendor.name || "Unnamed account" }}</b
+                ><small
+                  >{{ vendor.vendorCode || "No vendor code" }} ·
+                  {{
+                    vendor.marketplaceName ||
+                      vendor.region ||
+                      "Marketplace not set"
+                  }}</small
+                ></span
+              ><span
+                class="status-tag"
+                [class.tag-neutral]="!vendor.isActive"
+                >{{ label(vendor) }}</span
+              ><app-icon name="arrow" [size]="16"
+            /></a>
+          }
+        </div>
+        @if (attention() + inactive() > 4) {
+          <a class="text-link mt-4" routerLink="/vendor-accounts"
+            >View all accounts <app-icon name="arrow" [size]="16"
+          /></a>
+        }
+      }
+    </section>
+  </div>
+  <div class="min-w-0 space-y-6">
+    <section class="panel integration-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">AMAZON SP-API</p>
+          <h2>Connection overview</h2>
+        </div>
+        <span class="amazon-mark" aria-hidden="true">a<span>↗</span></span>
+      </div>
+      @if (loading()) {
+        <div
+          class="skeleton list-skeleton"
+          aria-label="Loading connection information"
+        ></div>
+      } @else {
+        <div class="connection-state">
+          <span
+            class="status-tag"
+            [class.tag-blue]="summary()?.hasConfiguredCredentials"
+            [class.tag-neutral]="!summary()"
+            ><i></i
+            >{{
+              !summary()
+                ? "Status unavailable"
+                : summary()?.hasConfiguredCredentials
+                  ? "Credentials configured"
+                  : "Setup required"
+            }}</span
+          >
+        </div>
+        <dl class="details-list">
+          <div>
+            <dt>Connection type</dt>
+            <dd>Amazon Vendor Central</dd>
+          </div>
+          <div>
+            <dt>Credential rotation</dt>
+            <dd>
+              {{
+                summary()?.nextCredentialRotationDeadlineUtc
+                  ? (summary()?.nextCredentialRotationDeadlineUtc
+                    | date: "mediumDate")
+                  : "Not reported"
+              }}
+            </dd>
+          </div>
+          <div>
+            <dt>Live Amazon sync</dt>
+            <dd>Not verified</dd>
+          </div>
+        </dl>
+        <a class="secondary-button w-full mt-5" routerLink="/integration"
+          >Review connection <app-icon name="arrow" [size]="16"
+        /></a>
+      }
+    </section>
+    <section class="account-focus">
+      <p class="eyebrow">ACCOUNT IN FOCUS</p>
+      @if (context.selected(); as vendor) {
+        <div class="flex items-center gap-3 mt-4">
+          <span class="vendor-monogram">{{
+            (vendor.name || "V").slice(0, 2).toUpperCase()
+          }}</span>
+          <div class="min-w-0">
+            <h2 class="break-words">{{ vendor.name || "Unnamed account" }}</h2>
+            <p class="muted">{{ vendor.vendorCode }}</p>
+          </div>
+        </div>
+        <dl class="details-list">
+          <div>
+            <dt>Marketplace</dt>
+            <dd>
+              {{ vendor.marketplaceName || vendor.marketplaceId || "Not set" }}
+            </dd>
+          </div>
+          <div>
+            <dt>Credential status</dt>
+            <dd>{{ label(vendor) }}</dd>
+          </div>
+        </dl>
+        <a routerLink="/products" class="text-link"
+          >Open account catalog <app-icon name="arrow" [size]="16"
+        /></a>
+      } @else {
+        <h2>A closer look at your accounts.</h2>
+        <p>
+          Choose a working account in the top bar to focus products and purchase
+          orders on one vendor.
+        </p>
+        <a routerLink="/vendor-accounts" class="text-link"
+          >Browse your accounts <app-icon name="arrow" [size]="16"
+        /></a>
+      }
+    </section>
+  </div>
+</div>
+<p class="data-note">
+  <app-icon name="info" [size]="14" />Workspace records are shown here. Live
+  Amazon synchronization is not yet enabled.
+</p>
