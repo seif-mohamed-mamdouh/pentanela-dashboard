@@ -54,6 +54,27 @@ export const routes: Routes = [
         },
       },
       {
+        path: "asin-imports",
+        children: [
+          {
+            path: "",
+            title: "ASIN imports | Pentanela",
+            loadComponent: () =>
+              import("./features/catalog-import/catalog-import.component").then(
+                (c) => c.CatalogImportComponent,
+              ),
+          },
+          {
+            path: ":jobId",
+            title: "ASIN import results | Pentanela",
+            loadComponent: () =>
+              import("./features/catalog-import/catalog-import-job.component").then(
+                (c) => c.CatalogImportJobComponent,
+              ),
+          },
+        ],
+      },
+      {
         path: "purchase-orders",
         title: "Purchase orders | Pentanela",
         loadComponent: records,

@@ -276,18 +276,18 @@ export class ShellComponent implements OnInit {
     { path: "/dashboard", icon: "grid", label: "Overview" },
     { path: "/vendor-accounts", icon: "accounts", label: "Vendor accounts" },
     { path: "/products", icon: "box", label: "Products" },
+    { path: "/asin-imports", icon: "search", label: "ASIN imports" },
     { path: "/purchase-orders", icon: "orders", label: "Purchase orders" },
     { path: "/bulk-upload", icon: "upload", label: "Bulk uploads" },
   ];
-  readonly sectionTitle = computed(
-    () =>
-      [
-        ...this.navigation,
-        { path: "/integration", label: "Amazon connection" },
-        { path: "/employees", label: "Team members" },
-      ].find((item) => this.routePath().split("?")[0] === item.path)?.label ||
-      "Overview",
-  );
+  readonly sectionTitle = computed(() => {
+    const [path] = this.routePath().split(/[?#]/);
+    return [
+      ...this.navigation,
+      { path: "/integration", label: "Amazon connection" },
+      { path: "/employees", label: "Team members" },
+    ].find((item) => path === item.path || path.startsWith(`${item.path}/`))?.label || "Overview";
+  });
   private previousOverflow = "";
   ngOnInit(): void {
     this.loadVendors();

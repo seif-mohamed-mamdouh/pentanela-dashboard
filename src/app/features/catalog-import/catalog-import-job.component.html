@@ -1,0 +1,120 @@
+<header class="page-heading">
+  <div>
+    <h1>ASIN import results<span class="gold-period">.</span></h1>
+    @if (job(); as currentJob) {
+      <p class="page-description">
+        {{ vendorName() || 'Vendor account' }} · {{ marketplace() }}
+        @if (currentJob.isSandbox) { <span class="status-tag">Sandbox test data</span> }
+      </p>
+    }
+  </div>
+  <a class="secondary-button" routerLink="/asin-imports">New import</a>
+</header>
+
+<section class="panel" aria-labelledby="import-progress-heading">
+  <div class="panel-heading">
+    <h2 id="import-progress-heading">Import progress</h2>
+    @if (job(); as currentJob) {
+      <span class="status-tag" [class.tag-green]="currentJob.status === 'Completed' && currentJob.failed === 0"
+        [class.tag-neutral]="currentJob.status === 'Queued'" [class.tag-blue]="currentJob.status === 'Running'"
+        [class.catalog-failed]="currentJob.status === 'Failed'">{{ currentJob.status }}</span>
+    }
+  </div>
+
+  @if (statusError()) {
+    <p class="inline-error catalog-error" role="alert">{{ statusError() }}</p>
+    <button class="secondary-button" type="button" (click)="refreshStatus()">Retry status check</button>
+  }
+  @if (statusLoading()) {
+    <p class="catalog-help" role="status">Checking import status…</p>
+  }
+  @if (job(); as currentJob) {
+    @if (currentJob.error) {
+      <p class="inline-error catalog-error" role="alert">{{ currentJob.error }}</p>
+    }
+    <p class="catalog-help" role="status">
+      <span class="sr-only">{{ currentJob.status }}.</span>
+      {{ currentJob.total - currentJob.pending | number }} of {{ currentJob.total | number }} rows processed
+    </p>
+    <progress class="catalog-progress" aria-label="ASIN rows processed" [max]="currentJob.total"
+      [value]="currentJob.total - currentJob.pending"></progress>
+    <div class="catalog-counts">
+      <span><strong>{{ currentJob.successful | number }}</strong> successful</span>
+      <span><strong>{{ currentJob.failed | number }}</strong> failed</span>
+      <span><strong>{{ currentJob.skipped | number }}</strong> skipped</span>
+      <span><strong>{{ currentJob.pending | number }}</strong> pending</span>
+    </div>
+    @if (!finished()) {
+      <p class="catalog-help">The import continues in the background. Bookmark this page to check its progress later.</p>
+    }
+  }
+</section>
+
+@if (finished() && job(); as currentJob) {
+  <section class="panel catalog-results" aria-labelledby="import-results-heading">
+    <div class="panel-heading">
+      <h2 id="import-results-heading">Workbook results</h2>
+      <button class="primary-button" type="button" (click)="download()" [disabled]="downloading()">Download Excel</button>
+    </div>
+    @if (downloading()) {
+      <p class="catalog-help" role="status">
+        @if (collected() < currentJob.total) {
+          Preparing download · {{ collected() | number }} of {{ currentJob.total | number }} rows collected
+        } @else {
+          Building the Excel workbook…
+        }
+      </p>
+    }
+    @if (downloadError()) {
+      <p class="inline-error catalog-error" role="alert">{{ downloadError() }}</p>
+    }
+    <p class="catalog-help">Use the ASIN column to match the results to your cost sheet. Live Amazon offer prices are unavailable.</p>
+
+    @if (previewLoading()) {
+      <p class="catalog-help" role="status">Loading the results preview…</p>
+    } @else if (previewError()) {
+      <p class="inline-error catalog-error" role="alert">{{ previewError() }}</p>
+      <button class="secondary-button" type="button" (click)="refreshPreview()">Retry preview</button>
+    } @else if (previewItems().length) {
+      @if (previewItems().length < currentJob.total) {
+        <p class="catalog-help">Showing {{ previewItems().length | number }} of {{ currentJob.total | number }} rows.</p>
+      }
+      <div class="table-scroller mt-4" tabindex="0" role="region" aria-label="ASIN results preview">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">ASIN</th>
+              <th scope="col">Product</th>
+              <th scope="col">Workbook row</th>
+              <th scope="col">Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of previewItems(); track item.inputNumber) {
+              <tr>
+                <td class="catalog-asin">{{ item.asin || '—' }}</td>
+                <td>
+                  <div class="catalog-product">
+                    @if (primaryImageUrl(item); as image) {
+                      <img [src]="image" alt="" width="44" height="44" loading="lazy" referrerpolicy="no-referrer"
+                        (error)="$any($event.target).hidden = true">
+                    }
+                    <span>{{ item.product?.title || '—' }}</span>
+                  </div>
+                </td>
+                <td>{{ item.worksheet }} · row {{ item.rowNumber | number }}</td>
+                <td>
+                  <span class="status-tag" [class.tag-green]="item.status === 'Successful'"
+                    [class.tag-neutral]="item.status === 'Skipped'" [class.catalog-failed]="item.status === 'Failed'">{{ item.status }}</span>
+                  @if (item.error) { <small class="block muted mt-1">{{ item.error }}</small> }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="catalog-help">No result rows were returned.</p>
+    }
+  </section>
+}

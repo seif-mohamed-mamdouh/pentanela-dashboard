@@ -309,6 +309,7 @@ for (const width of [320, 390, 768, 1024, 1440]) {
         "/vendor-accounts",
         "/integration",
         "/products",
+        "/asin-imports",
       ]) {
         await page.goto(path);
         await expect(
@@ -330,6 +331,7 @@ for (const path of [
   "/vendor-accounts",
   "/integration",
   "/products",
+  "/asin-imports",
   "/purchase-orders",
   "/employees",
 ]) {
