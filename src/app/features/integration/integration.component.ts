@@ -14,7 +14,7 @@ import { IconComponent } from '../../shared/icon.component';
 
 @Component({ standalone: true, imports: [RouterLink, FormsModule, DatePipe, IconComponent], template: `
 <section class="page-heading"><div><p class="eyebrow">AMAZON VENDOR CENTRAL</p><h1>Amazon connection<span class="gold-period">.</span></h1><p class="page-description">Configure your application and manage vendor authorization.</p></div><a class="secondary-button" routerLink="/vendor-accounts">View vendor accounts <app-icon name="arrow" [size]="17" /></a></section>
-<p class="scope-explanation">Connection tests verify Amazon token exchange. Catalog batches use the backend’s staging feed service, and order acknowledgments are saved locally.</p>
+<p class="scope-explanation">Connection tests verify Amazon token exchange. Open a product batch to check its feed status and item results. Order acknowledgments are saved locally.</p>
 <div class="integration-layout">
  <section class="panel" aria-labelledby="app-credentials-heading"><div class="panel-heading"><div><p class="eyebrow">SHARED APPLICATION</p><h2 id="app-credentials-heading">Application credentials</h2></div><button class="icon-button" type="button" aria-label="Refresh application credentials" (click)="loadApp()" [disabled]="appBusy() || appLoading()"><app-icon name="refresh" /></button></div>
   @if (appLoading()) { <div class="skeleton chart-skeleton" role="status" aria-label="Loading application credentials"></div> }

@@ -12,13 +12,14 @@ import {
   CatalogImportApiService, CatalogImportItem, CatalogImportJob, catalogImportError, isFinished,
 } from './catalog-import-api.service';
 import { catalogMarketplace } from './catalog-marketplaces';
+import { CatalogPriceComponent } from './catalog-price.component';
 import { CatalogWorkbookRow, createCatalogWorkbook, primaryImageUrl, workbookRow } from './catalog-workbook';
 
 const pollInterval = 5000;
 
 @Component({
   standalone: true,
-  imports: [DecimalPipe, RouterLink],
+  imports: [DecimalPipe, RouterLink, CatalogPriceComponent],
   templateUrl: './catalog-import-job.component.html',
   styleUrl: './catalog-import.css',
 })
@@ -40,6 +41,7 @@ export class CatalogImportJobComponent implements OnInit {
   readonly downloading = signal(false);
   readonly downloadError = signal('');
   readonly collected = signal(0);
+  readonly includeLivePrice = signal(false);
   readonly finished = computed(() => {
     const job = this.job();
     return job !== null && isFinished(job.status);
@@ -60,6 +62,7 @@ export class CatalogImportJobComponent implements OnInit {
       distinctUntilChanged(),
       switchMap(jobId => {
         this.cancelDownload.next();
+        this.includeLivePrice.set(false);
         this.job.set(null);
         this.previewItems.set([]);
         this.previewError.set('');
@@ -85,6 +88,15 @@ export class CatalogImportJobComponent implements OnInit {
     this.previewRefresh.next();
   }
 
+  setLivePrices(enabled: boolean): void {
+    this.includeLivePrice.set(enabled);
+    this.previewItems.set([]);
+    this.downloadError.set('');
+    this.refreshPreview();
+  }
+
+  stopDownload(): void { this.cancelDownload.next(); }
+
   download(): void {
     const job = this.job();
     if (!job || !this.finished() || this.downloading()) return;
@@ -94,15 +106,16 @@ export class CatalogImportJobComponent implements OnInit {
     this.collected.set(0);
     const accountName = this.vendorName() ?? job.accountId;
     const marketplace = this.marketplace();
-    this.api.resultPages(job).pipe(
+    const priced = this.includeLivePrice();
+    this.api.resultPages(job, priced).pipe(
       reduce((rows, page) => {
-        rows.push(...page.items.map(workbookRow));
+        rows.push(...page.items.map(item => workbookRow(item, priced)));
         this.collected.set(rows.length);
         return rows;
       }, [] as CatalogWorkbookRow[]),
       switchMap(rows => {
         if (rows.length !== job.total) throw new Error('The import returned an incomplete set of rows.');
-        return createCatalogWorkbook(rows, job, accountName, marketplace);
+        return createCatalogWorkbook(rows, job, accountName, marketplace, priced);
       }),
       takeUntil(this.cancelDownload),
       takeUntilDestroyed(this.destroyRef),
@@ -134,7 +147,7 @@ export class CatalogImportJobComponent implements OnInit {
   private loadPreview(jobId: string) {
     this.previewLoading.set(true);
     this.previewError.set('');
-    return this.api.items(jobId).pipe(
+    return this.api.items(jobId, 0, 20, this.includeLivePrice()).pipe(
       map(page => page.items),
       catchError(error => {
         this.previewError.set(catalogImportError(error, 'The results preview could not be loaded.'));

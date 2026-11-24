@@ -23,13 +23,18 @@ export class OperationsApiService {
   batches(vendorId: string): Observable<BulkUploadBatchDto[]> { return this.http.get<BulkUploadBatchDto[]>(`/api/bulk-upload/vendor/${encodeURIComponent(vendorId)}`); }
   batch(id: string): Observable<BulkUploadBatchDto> { return this.http.get<BulkUploadBatchDto>(`/api/bulk-upload/batches/${encodeURIComponent(id)}`); }
   refreshBatch(id: string): Observable<BulkUploadBatchDto> { return this.http.post<BulkUploadBatchDto>(`/api/bulk-upload/batches/${encodeURIComponent(id)}/refresh`, {}); }
-  submitItems(vendorAccountId: string, batchReference: string, items: BulkUploadItemInput[]): Observable<BulkUploadBatchDto> {
-    return this.http.post<BulkUploadBatchDto>('/api/bulk-upload', { vendorAccountId, batchReference: batchReference || null, items });
+  submitExemptProduct(vendorAccountId: string, item: BulkUploadItemInput): Observable<BulkUploadBatchDto> {
+    return this.http.post<BulkUploadBatchDto>('/api/products/gtin-exempt', { vendorAccountId, item });
   }
-  uploadExcel(vendorId: string, file: File, reference: string): Observable<BulkUploadBatchDto> {
+  submitItems(vendorAccountId: string, batchReference: string, items: BulkUploadItemInput[], useGtinExemption = false): Observable<BulkUploadBatchDto> {
+    const path = useGtinExemption ? '/api/bulk-upload/gtin-exempt' : '/api/bulk-upload';
+    return this.http.post<BulkUploadBatchDto>(path, { vendorAccountId, batchReference: batchReference || null, items });
+  }
+  uploadExcel(vendorId: string, file: File, reference: string, useGtinExemption = false): Observable<BulkUploadBatchDto> {
     const form = new FormData(); form.append('VendorAccountId', vendorId); form.append('File', file);
     if (reference.trim()) form.append('BatchReference', reference.trim());
-    return this.http.post<BulkUploadBatchDto>('/api/bulk-upload/excel', form);
+    const path = useGtinExemption ? '/api/bulk-upload/gtin-exempt/excel' : '/api/bulk-upload/excel';
+    return this.http.post<BulkUploadBatchDto>(path, form);
   }
   users(): Observable<UserDto[]> { return this.http.get<UserDto[]>('/api/auth/users'); }
   createUser(request: CreateUserRequest): Observable<UserDto> { return this.http.post<UserDto>('/api/auth/users', request); }

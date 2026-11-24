@@ -43,7 +43,7 @@ interface DisplayRow { id: string; title: string; subtitle: string; owner: strin
    @if (paginated) { <div class="table-footer"><span>Page {{ page() }} · {{ kind === 'products' ? 'Search applies to the catalog' : 'Search applies to this page' }}</span><div class="flex gap-2"><button class="pagination-button" type="button" [disabled]="page() === 1 || loading()" (click)="previous()">Previous</button><button class="pagination-button" type="button" [disabled]="!hasNext() || loading() || !!error()" (click)="next()">Next</button></div></div> }
   }
  </section>
- <p class="data-note"><app-icon name="info" [size]="14" />{{ kind === 'team' ? 'Administrators can create team members. Role editing is not supported by this API.' : 'These are saved workspace records. Live Amazon synchronization is not yet enabled.' }}</p>` })
+ <p class="data-note"><app-icon name="info" [size]="14" />{{ kind === 'team' ? 'Administrators can create team members. Role editing is not supported by this API.' : 'Totals and statuses reflect saved workspace records.' }}</p>` })
 export class RecordsComponent {
  private readonly data = inject(ActivatedRoute).snapshot.data;
  private readonly api = inject(OperationsApiService);
@@ -92,7 +92,7 @@ export class RecordsComponent {
  private display(value: ProductDto | PurchaseOrderDto | BulkUploadBatchDto | UserDto): DisplayRow {
   if (this.kind === 'products') { const v = value as ProductDto; return { id:v.id, title:v.title, subtitle:v.sku + (v.asin ? ' · ' + v.asin : ''), owner:v.vendorAccountName || 'Unnamed account', status:v.status, value:this.amount(v.costPrice,v.currency), date:this.date(v.createdAtUtc) }; }
   if (this.kind === 'orders') { const v = value as PurchaseOrderDto; return { id:v.id, title:v.amazonOrderNumber, subtitle:v.itemsCount + ' items', owner:v.vendorAccountName || 'Unnamed account', status:v.orderStatus, value:this.amount(v.totalAmount,v.currency), date:this.date(v.purchaseOrderDateUtc) }; }
-  if (this.kind === 'batches') { const v = value as BulkUploadBatchDto; return { id:v.id, title:v.batchReference || 'Unnamed batch', subtitle:'Acceptance not verified', owner:v.vendorAccountName || 'Unnamed account', status:v.status, value:v.totalItems + ' total · ' + v.errorCount + ' errors', date:this.date(v.createdAtUtc) }; }
+  if (this.kind === 'batches') { const v = value as BulkUploadBatchDto; return { id:v.id, title:v.batchReference || 'Unnamed batch', subtitle:v.useGtinExemption ? 'GTIN-exempt upload' : 'Acceptance not verified', owner:v.vendorAccountName || 'Unnamed account', status:v.status, value:v.totalItems + ' total · ' + v.errorCount + ' errors', date:this.date(v.createdAtUtc) }; }
   const v = value as UserDto; return { id:v.id, title:v.username || 'Team member', subtitle:v.email || '', owner:v.role || 'User', status:v.isActive ? 'Active' : 'Inactive', value:this.date(v.lastLoginAtUtc), date:this.date(v.createdAtUtc) };
  }
 }

@@ -23,11 +23,12 @@ import { apiError } from '../../core/utils/api-error';
    @if (credentials(); as c) { <dl class="details-list"><div><dt>Refresh token (masked)</dt><dd>{{ c.maskedRefreshToken }}</dd></div><div><dt>Custom client ID</dt><dd>{{ c.customClientId || 'Shared application' }}</dd></div><div><dt>Custom secret (masked)</dt><dd>{{ c.maskedCustomClientSecret || 'Shared application' }}</dd></div></dl> }
   }
   <form #vendorForm="ngForm" (ngSubmit)="save()"><fieldset [disabled]="busy() || !isAdmin()"><div class="form-grid">
-   <label class="form-field">Account name<input name="name" [(ngModel)]="form.name" required></label><label class="form-field">Vendor code<input name="vendorCode" [(ngModel)]="form.vendorCode" required></label>
-   <label class="form-field">Marketplace ID<input name="marketplaceId" [(ngModel)]="form.marketplaceId" required></label><label class="form-field">Marketplace name<input name="marketplaceName" [(ngModel)]="form.marketplaceName"></label>
+   <label class="form-field">Account name<input name="name" [(ngModel)]="form.name" required></label><label class="form-field">Vendor code<input name="vendorCode" [(ngModel)]="form.vendorCode" (ngModelChange)="form.gtinExemptionEnabled = false" required></label>
+   <label class="form-field">Marketplace ID<input name="marketplaceId" [(ngModel)]="form.marketplaceId" (ngModelChange)="form.gtinExemptionEnabled = false" required></label><label class="form-field">Marketplace name<input name="marketplaceName" [(ngModel)]="form.marketplaceName"></label>
    <label class="form-field">Region<select name="region" [(ngModel)]="form.region"><option value="NA">North America (NA)</option><option value="EU">Europe / Middle East (EU)</option><option value="FE">Far East (FE)</option></select></label><label class="form-field">Selling partner ID<input name="sellingPartnerId" [(ngModel)]="form.sellingPartnerId"></label>
    <label class="form-field">Contact email<input name="contactEmail" type="email" email [(ngModel)]="form.contactEmail"></label><label class="form-field">Refresh token {{ id() ? '(leave blank to keep)' : '' }}<input name="refreshToken" type="password" [(ngModel)]="form.refreshToken" autocomplete="new-password" [required]="!id()"></label>
    @if (id()) { <label class="check-field full-width"><input name="isActive" type="checkbox" [(ngModel)]="isActive">Account active</label> }
+   <label class="check-field full-width"><input type="checkbox" name="gtinExemptionEnabled" [(ngModel)]="form.gtinExemptionEnabled">Allow GTIN-exempt uploads for Amazon-approved brands in this marketplace</label>
   </div>
   <details class="report-details"><summary>Custom application credentials (optional)</summary><p class="section-note">Leave both fields blank to {{ id() ? 'keep the current credentials' : 'use the shared Amazon application' }}.</p><div class="form-grid"><label class="form-field">Custom client ID<input name="customClientId" [(ngModel)]="form.customClientId" autocomplete="off" [disabled]="clearCustom"></label><label class="form-field">Custom client secret<input name="customClientSecret" type="password" [(ngModel)]="form.customClientSecret" autocomplete="new-password" [disabled]="clearCustom"></label>@if (id()) { <label class="check-field full-width"><input name="clearCustom" type="checkbox" [(ngModel)]="clearCustom">Remove custom credentials and use shared application</label> }</div></details>
   <label class="form-field">Notes<textarea name="notes" [(ngModel)]="form.notes" rows="3"></textarea></label>
@@ -45,6 +46,7 @@ export class VendorEditorComponent implements OnInit {
   if (!this.id()) { this.loaded.set(true); return; }
   this.loading.set(true); this.api.getById(this.id()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: v => {
    this.form = { name:v.name || '', vendorCode:v.vendorCode || '', marketplaceId:v.marketplaceId || '', marketplaceName:v.marketplaceName || '', region:v.region || 'EU', sellingPartnerId:v.sellingPartnerId || '', refreshToken:'', customClientId:'', customClientSecret:'', contactEmail:v.contactEmail || '', notes:v.notes || '' };
+   this.form.gtinExemptionEnabled = v.gtinExemptionEnabled ?? false;
    this.isActive = v.isActive; this.tokenStatus.set(v.tokenStatus || 'Unverified'); this.validatedAt.set(v.lastTokenValidatedAtUtc || null); this.validationError.set(v.lastValidationError || ''); this.loading.set(false); this.loaded.set(true);
   }, error: e => { this.error.set(apiError(e)); this.loading.set(false); } });
  }

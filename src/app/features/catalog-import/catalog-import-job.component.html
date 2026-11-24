@@ -57,6 +57,7 @@
       <button class="primary-button" type="button" (click)="download()" [disabled]="downloading()">Download Excel</button>
     </div>
     @if (downloading()) {
+      <button class="secondary-button" type="button" (click)="stopDownload()">Cancel download</button>
       <p class="catalog-help" role="status">
         @if (collected() < currentJob.total) {
           Preparing download · {{ collected() | number }} of {{ currentJob.total | number }} rows collected
@@ -68,7 +69,9 @@
     @if (downloadError()) {
       <p class="inline-error catalog-error" role="alert">{{ downloadError() }}</p>
     }
-    <p class="catalog-help">Use the ASIN column to match the results to your cost sheet. Live Amazon offer prices are unavailable.</p>
+    <label class="check-field"><input type="checkbox" [checked]="includeLivePrice()" [disabled]="downloading()"
+      (change)="setLivePrices($any($event.target).checked)">Include live storefront prices in the preview and Excel download</label>
+    @if (includeLivePrice()) { <p class="catalog-help">Prices are checked when results are read. Large downloads can take longer.</p> }
 
     @if (previewLoading()) {
       <p class="catalog-help" role="status">Loading the results preview…</p>
@@ -85,6 +88,7 @@
             <tr>
               <th scope="col">ASIN</th>
               <th scope="col">Product</th>
+              @if (includeLivePrice()) { <th scope="col">Storefront price</th> }
               <th scope="col">Workbook row</th>
               <th scope="col">Outcome</th>
             </tr>
@@ -102,6 +106,7 @@
                     <span>{{ item.product?.title || '—' }}</span>
                   </div>
                 </td>
+                @if (includeLivePrice()) { <td><app-catalog-price [price]="item.product?.livePrice" /></td> }
                 <td>{{ item.worksheet }} · row {{ item.rowNumber | number }}</td>
                 <td>
                   <span class="status-tag" [class.tag-green]="item.status === 'Successful'"

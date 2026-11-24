@@ -7,13 +7,14 @@ import { VendorAccountsService } from '../../core/services/vendor-accounts.servi
 import { VendorContextService } from '../../core/state/vendor-context.service';
 import { IconComponent } from '../../shared/icon.component';
 import { CatalogImportApiService, catalogImportError } from './catalog-import-api.service';
+import { CatalogBrowserComponent } from './catalog-browser.component';
 import { catalogMarketplace } from './catalog-marketplaces';
 
 const maxFileSize = 10 * 1024 * 1024;
 
 @Component({
   standalone: true,
-  imports: [FormsModule, RouterLink, IconComponent],
+  imports: [FormsModule, RouterLink, IconComponent, CatalogBrowserComponent],
   templateUrl: './catalog-import.component.html',
   styleUrl: './catalog-import.css',
 })
@@ -33,15 +34,17 @@ export class CatalogImportComponent {
     const name = this.account()?.marketplaceName?.trim().toUpperCase() ?? '';
     return /^[A-Z]{2}$/.test(name) ? name : '';
   });
-  private readonly marketplaceCode = computed(() =>
+  readonly marketplaceCode = computed(() =>
     this.marketplace()?.code ?? this.marketplaceInput().trim().toUpperCase());
+  readonly browsing = signal(false);
   readonly file = signal<File | null>(null);
+  readonly validMarketplace = computed(() => /^[A-Z]{2}$/.test(this.marketplaceCode()));
   readonly fileError = signal('');
   readonly submitError = signal('');
   readonly uploading = signal(false);
   readonly acceptedJobId = signal('');
   readonly canSubmit = computed(() => Boolean(
-    this.account() && this.file() && /^[A-Z]{2}$/.test(this.marketplaceCode()) &&
+    this.account() && this.file() && this.validMarketplace() &&
     !this.uploading() && !this.acceptedJobId(),
   ));
 
@@ -72,7 +75,7 @@ export class CatalogImportComponent {
   submit(): void {
     const account = this.account();
     const file = this.file();
-    if (!account || !file || !this.canSubmit()) return;
+    if (this.browsing() || !account || !file || !this.canSubmit()) return;
 
     this.submitError.set('');
     this.uploading.set(true);

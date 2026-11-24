@@ -1,71 +1,76 @@
 <header class="page-heading">
   <div>
     <h1>ASIN imports<span class="gold-period">.</span></h1>
-    <p class="page-description">Look up Amazon catalog details in bulk and download the results as an Excel workbook.</p>
+    <p class="page-description">Look up Amazon products and storefront prices, or import a workbook of ASINs.</p>
   </div>
 </header>
 
 <section class="panel catalog-upload" aria-labelledby="catalog-upload-heading">
-  <h2 id="catalog-upload-heading">Upload an ASIN workbook</h2>
-  <p class="catalog-help" id="asin-workbook-help">
-    Use <strong>ASIN</strong> as the column header in the first populated row of each worksheet you want to import.
-    Format the column as text to keep leading zeros. Use one ASIN per cell, up to 20,000 rows per .xlsx file (10 MiB maximum).
-  </p>
+  <div class="panel-heading">
+    <h2 id="catalog-upload-heading">{{ browsing() ? 'Browse Amazon catalog' : 'Upload an ASIN workbook' }}</h2>
+    <button class="secondary-button" type="button" [disabled]="uploading() || !!acceptedJobId()" (click)="browsing.set(!browsing())">
+      {{ browsing() ? 'Upload a workbook' : 'Browse Amazon catalog' }}
+    </button>
+  </div>
 
   @if (acceptedJobId(); as jobId) {
     <p class="catalog-help" role="status">Workbook accepted.</p>
     <a class="primary-button" [routerLink]="['/asin-imports', jobId]">View import progress</a>
   } @else {
-    <form (ngSubmit)="submit()">
-      <fieldset [disabled]="uploading()">
-        <div class="form-grid">
-          <div class="form-field">
-            <label for="catalog-account">Vendor account</label>
-            <select id="catalog-account" name="accountId" [ngModel]="account()?.id ?? ''"
-              (ngModelChange)="chooseAccount($event)" required>
-              <option value="">Choose an active account</option>
-              @for (vendor of accounts(); track vendor.id) {
-                <option [value]="vendor.id">{{ vendor.name || vendor.vendorCode || vendor.id }} ({{ vendor.marketplaceName || vendor.marketplaceId }})</option>
-              }
-            </select>
-          </div>
-          @if (marketplace(); as market) {
-            <div class="form-field">
-              <label for="catalog-marketplace">Marketplace</label>
-              <input id="catalog-marketplace" [value]="market.name + ' (' + market.code + ')'" readonly>
-            </div>
-          } @else if (account()) {
-            <div class="form-field">
-              <label for="catalog-marketplace-code">Marketplace code</label>
-              <input id="catalog-marketplace-code" name="marketplace" [ngModel]="marketplaceInput()"
-                (ngModelChange)="marketplaceInput.set($event)" maxlength="2" required
-                aria-describedby="catalog-marketplace-help">
-              <small id="catalog-marketplace-help">Enter the two-letter Catalog marketplace code for this account.</small>
-            </div>
-          }
-          <div class="form-field full-width">
-            <label for="asin-workbook">ASIN workbook (.xlsx)</label>
-            <input id="asin-workbook" type="file" accept=".xlsx" (change)="chooseFile($event)"
-              [attr.aria-invalid]="fileError() ? 'true' : null"
-              [attr.aria-describedby]="fileError() ? 'asin-workbook-help asin-workbook-error' : 'asin-workbook-help'">
-            @if (fileError()) {
-              <p id="asin-workbook-error" class="inline-error catalog-error" role="alert">{{ fileError() }}</p>
+    <fieldset [disabled]="uploading()" aria-label="Catalog account and marketplace">
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="catalog-account">Vendor account</label>
+          <select id="catalog-account" name="accountId" [ngModel]="account()?.id ?? ''" (ngModelChange)="chooseAccount($event)" required>
+            <option value="">Choose an active account</option>
+            @for (vendor of accounts(); track vendor.id) {
+              <option [value]="vendor.id">{{ vendor.name || vendor.vendorCode || vendor.id }} ({{ vendor.marketplaceName || vendor.marketplaceId }})</option>
             }
-          </div>
+          </select>
         </div>
-
-        @if (submitError()) {
-          <p class="inline-error catalog-error" role="alert">{{ submitError() }}</p>
+        @if (marketplace(); as market) {
+          <div class="form-field">
+            <label for="catalog-marketplace">Marketplace</label>
+            <input id="catalog-marketplace" [value]="market.name + ' (' + market.code + ')'" readonly>
+          </div>
+        } @else if (account()) {
+          <div class="form-field">
+            <label for="catalog-marketplace-code">Marketplace code</label>
+            <input id="catalog-marketplace-code" name="marketplace" [ngModel]="marketplaceInput()"
+              (ngModelChange)="marketplaceInput.set($event)" maxlength="2" required aria-describedby="catalog-marketplace-help">
+            <small id="catalog-marketplace-help">Enter the two-letter Catalog marketplace code for this account.</small>
+          </div>
         }
-        <button class="primary-button" type="submit" [disabled]="!canSubmit()">
+      </div>
+    </fieldset>
+
+    @if (browsing()) {
+      @if (account(); as vendor) {
+        @if (validMarketplace()) { <app-catalog-browser [accountId]="vendor.id" [marketplace]="marketplaceCode()" /> }
+      } @else {
+        <p class="catalog-help">Choose a vendor account to browse its marketplace.</p>
+      }
+    }
+
+    <form (ngSubmit)="submit()" [hidden]="browsing()">
+      <fieldset [disabled]="uploading() || browsing()">
+        <div class="form-field">
+          <label for="asin-workbook">ASIN workbook (.xlsx)</label>
+          <input id="asin-workbook" type="file" accept=".xlsx" (change)="chooseFile($event)"
+            [attr.aria-invalid]="fileError() ? 'true' : null"
+            [attr.aria-describedby]="fileError() ? 'asin-workbook-help asin-workbook-error' : 'asin-workbook-help'">
+          <small id="asin-workbook-help">Use <strong>ASIN</strong> as the column header in the first populated row of each worksheet.
+            Format the column as text to keep leading zeros. Use one ASIN per cell, up to 20,000 rows per workbook (10 MiB maximum).</small>
+          @if (fileError()) { <p id="asin-workbook-error" class="inline-error catalog-error" role="alert">{{ fileError() }}</p> }
+        </div>
+        @if (submitError()) { <p class="inline-error catalog-error" role="alert">{{ submitError() }}</p> }
+        <button class="primary-button mt-4" type="submit" [disabled]="!canSubmit()">
           <app-icon name="upload" [size]="17" />{{ uploading() ? 'Uploading workbook…' : 'Start import' }}
         </button>
+        <p class="catalog-note"><app-icon name="info" [size]="17" />
+          <span>You can include live storefront prices when previewing or downloading the import results.</span>
+        </p>
       </fieldset>
     </form>
   }
-
-  <p class="catalog-note">
-    <app-icon name="info" [size]="17" />
-    <span>Results include available product titles and image links. Live Amazon offer prices are unavailable.</span>
-  </p>
 </section>

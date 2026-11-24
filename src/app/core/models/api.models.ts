@@ -25,6 +25,7 @@ export interface BulkUploadBatchDto {
   feedId?: string | null; feedDocumentId?: string | null; processedItems: number; successCount: number;
   errorReportJson?: string | null; submittedAtUtc?: string | null; completedAtUtc?: string | null;
   items?: BulkUploadItemDto[] | null;
+  useGtinExemption?: boolean;
 }
 // Backend currently returns a token *as well as* issuing a cookie. The UI never reads/stores that token.
 export interface DashboardSummaryDto {
@@ -40,6 +41,7 @@ export interface VendorAccountDto {
   tokenStatus?: string | null; lastTokenValidatedAtUtc?: string | null;
   lastValidationError?: string | null; hasCustomAppCredentials: boolean;
   isActive: boolean; contactEmail?: string | null; notes?: string | null;
+  gtinExemptionEnabled?: boolean;
   createdAtUtc: string;
 }
 
@@ -65,6 +67,7 @@ export interface VendorAccountRequest {
   name: string; vendorCode: string; marketplaceId: string; marketplaceName: string; region: string;
   sellingPartnerId: string; refreshToken: string; customClientId: string | null;
   customClientSecret: string | null; contactEmail: string; notes: string;
+  gtinExemptionEnabled?: boolean;
 }
 export interface AmazonCredentialDto {
   id: string; appName: string; clientId: string; maskedClientSecret: string;

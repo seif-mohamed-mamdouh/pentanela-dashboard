@@ -10,6 +10,11 @@ export type CatalogWorkbookRow = [
   status: string,
   errorCode: string | null,
   details: string | null,
+  amount?: number | null,
+  currency?: string | null,
+  priceStatus?: string | null,
+  priceSource?: string | null,
+  checkedAtUtc?: string | null,
 ];
 
 function httpsImageUrl(link?: string | null): string | null {
@@ -27,12 +32,12 @@ export function primaryImageUrl(item: CatalogImportItem): string | null {
     item.product?.images?.map(image => httpsImageUrl(image.link)).find(Boolean) ?? null;
 }
 
-export function workbookRow(item: CatalogImportItem): CatalogWorkbookRow {
+export function workbookRow(item: CatalogImportItem, includeLivePrice: boolean): CatalogWorkbookRow {
   const image = primaryImageUrl(item);
   const additional = new Set(item.product?.images?.map(value => httpsImageUrl(value.link)));
   additional.delete(null);
   additional.delete(image);
-  return [
+  const row: CatalogWorkbookRow = [
     item.asin ?? null,
     item.product?.title ?? null,
     image,
@@ -43,10 +48,16 @@ export function workbookRow(item: CatalogImportItem): CatalogWorkbookRow {
     item.errorCode ?? null,
     item.error ?? null,
   ];
+  if (includeLivePrice) {
+    const price = item.product?.livePrice;
+    row.push(price?.status === 'Available' ? price.amount ?? null : null, price?.currency ?? null,
+      price?.status ?? null, price?.sourceUrl ?? null, price?.checkedAtUtc ?? null);
+  }
+  return row;
 }
 
 export async function createCatalogWorkbook(
-  rows: CatalogWorkbookRow[], job: CatalogImportJob, accountName: string, marketplace: string,
+  rows: CatalogWorkbookRow[], job: CatalogImportJob, accountName: string, marketplace: string, includeLivePrice: boolean,
 ): Promise<Blob> {
   const { default: writeXlsxFile } = await import('write-excel-file/browser');
   const header = (labels: string[]) => labels.map(value => ({
@@ -57,9 +68,10 @@ export async function createCatalogWorkbook(
     {
       sheet: 'ASIN results',
       stickyRowsCount: 1,
-      columns: [16, 60, 48, 48, 26, 13, 16, 26, 60].map(width => ({ width })),
+      columns: [16, 60, 48, 48, 26, 13, 16, 26, 60, ...(includeLivePrice ? [18, 14, 24, 50, 30] : [])].map(width => ({ width })),
       data: [
-        header(['ASIN', 'Title', 'Main image URL', 'Additional image URLs', 'Worksheet', 'Excel row', 'Status', 'Error code', 'Details']),
+        header(['ASIN', 'Title', 'Main image URL', 'Additional image URLs', 'Worksheet', 'Excel row', 'Status', 'Error code', 'Details',
+          ...(includeLivePrice ? ['Storefront price', 'Currency', 'Price status', 'Price source URL', 'Price checked at (UTC)'] : [])]),
         ...rows,
       ],
     },
@@ -74,7 +86,7 @@ export async function createCatalogWorkbook(
         ['Submitted at (UTC)', job.createdAtUtc],
         ['Import status', job.status],
         ['Job reference', job.jobId],
-        ['Live Amazon offer prices', 'Unavailable from the Catalog API'],
+        ['Live storefront prices requested', includeLivePrice ? 'Yes' : 'No'],
       ],
     },
   ]).toBlob();
